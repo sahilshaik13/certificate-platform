@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation"
 import type { Certificate } from "@/types/certificate"
 import { CertificateCard } from "@/components/certificate-card"
 import { CertificateUploadForm } from "@/components/certificate-upload-form"
+import { CertificateEditForm } from "@/components/certificate-edit-form"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Settings, BarChart3, Eye } from "lucide-react"
+import { Plus, Settings, BarChart3, Eye, Edit, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { CertificateViewer } from "@/components/certificate-viewer"
 import { AnalyticsDashboard } from "@/components/analytics-dashboard"
@@ -84,6 +85,10 @@ export default function AdminPage() {
     fetchCertificates()
   }
 
+  const handleEditSuccess = () => {
+    fetchCertificates()
+  }
+
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" })
@@ -110,15 +115,15 @@ export default function AdminPage() {
   }
 
   const stats = {
-    total: certificates.length,
-    public: certificates.filter((cert) => cert.isPublic).length,
-    private: certificates.filter((cert) => !cert.isPublic).length,
-    expired: certificates.filter((cert) => cert.expiryDate && new Date(cert.expiryDate) < new Date()).length,
+    total: certificates.length || 0,
+    public: certificates.filter((cert) => cert.isPublic).length || 0,
+    private: certificates.filter((cert) => !cert.isPublic).length || 0,
+    expired: certificates.filter((cert) => cert.expiryDate && new Date(cert.expiryDate) < new Date()).length || 0,
     totalViews: certificates.reduce((sum, cert) => sum + (cert.views || 0), 0),
-    mostViewed: certificates.reduce(
-      (max, cert) => ((cert.views || 0) > (max.views || 0) ? cert : max),
-      certificates[0],
-    ),
+    mostViewed:
+      certificates.length > 0
+        ? certificates.reduce((max, cert) => ((cert.views || 0) > (max.views || 0) ? cert : max), certificates[0])
+        : null,
   }
 
   return (
@@ -185,7 +190,7 @@ export default function AdminPage() {
                 <p className="text-gray-600">Expired</p>
               </div>
               <div className="bg-white rounded-lg p-6 shadow-sm">
-                <p className="text-2xl font-bold text-purple-600">{stats.totalViews.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-purple-600">{(stats.totalViews || 0).toLocaleString()}</p>
                 <p className="text-gray-600">Total Views</p>
               </div>
             </div>
@@ -196,22 +201,40 @@ export default function AdminPage() {
             {/* Recent Certificates */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h2 className="text-xl font-semibold mb-4">Recent Certificates</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {certificates.slice(0, 6).map((certificate) => (
-                  <div key={certificate._id} className="space-y-2">
-                    <CertificateCard certificate={certificate} showActions={false} onDelete={handleDelete} />
-                    <div className="flex gap-2">
+                  <div key={certificate._id} className="flex flex-col space-y-3">
+                    <div className="flex-1">
+                      <CertificateCard certificate={certificate} showActions={false} onDelete={handleDelete} />
+                    </div>
+                    <div className="flex gap-2 pt-2">
                       <CertificateViewer
                         certificate={certificate}
                         trigger={
                           <Button variant="outline" size="sm" className="flex-1">
-                            <Eye className="w-4 h-4 mr-2" />
-                            Preview
+                            <Eye className="w-4 h-4 mr-1" />
+                            <span className="hidden sm:inline">Preview</span>
                           </Button>
                         }
                       />
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(certificate._id!)}>
-                        Delete
+                      <CertificateEditForm
+                        certificate={certificate}
+                        onSuccess={handleEditSuccess}
+                        trigger={
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <Edit className="w-4 h-4 mr-1" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </Button>
+                        }
+                      />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleDelete(certificate._id!)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        <span className="hidden sm:inline">Delete</span>
                       </Button>
                     </div>
                   </div>
@@ -234,12 +257,44 @@ export default function AdminPage() {
                 </div>
               </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {certificates.map((certificate) => (
-                <div key={certificate._id} className="space-y-2">
-                  <CertificateCard certificate={certificate} showActions={false} onDelete={handleDelete} />
-                </div>
-              ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {certificates.map((certificate) => (
+                  <div key={certificate._id} className="flex flex-col space-y-3">
+                    <div className="flex-1">
+                      <CertificateCard certificate={certificate} showActions={false} onDelete={handleDelete} />
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <CertificateViewer
+                        certificate={certificate}
+                        trigger={
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <Eye className="w-4 h-4 mr-1" />
+                            <span className="hidden sm:inline">Preview</span>
+                          </Button>
+                        }
+                      />
+                      <CertificateEditForm
+                        certificate={certificate}
+                        onSuccess={handleEditSuccess}
+                        trigger={
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <Edit className="w-4 h-4 mr-1" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </Button>
+                        }
+                      />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleDelete(certificate._id!)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        <span className="hidden sm:inline">Delete</span>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </TabsContent>

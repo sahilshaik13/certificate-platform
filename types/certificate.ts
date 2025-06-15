@@ -10,11 +10,14 @@ export interface Certificate {
   fileType?: string
   fileSize?: number
   thumbnailUrl?: string
-  category: string
-  skills: string[]
+  category?: string
+  skills?: string[] // Make skills optional
   isPublic: boolean
+  views?: number // Add views counter
+  lastViewed?: Date // Add last viewed timestamp
   createdAt: Date
   updatedAt: Date
+  fileUpdatedAt?: Date // Track when file was last updated
 }
 
 export interface CertificateFormData {

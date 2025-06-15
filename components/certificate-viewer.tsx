@@ -12,9 +12,10 @@ import type { Certificate } from "@/types/certificate"
 interface CertificateViewerProps {
   certificate: Certificate
   trigger?: React.ReactNode
+  isAdmin?: boolean
 }
 
-export function CertificateViewer({ certificate, trigger }: CertificateViewerProps) {
+export function CertificateViewer({ certificate, trigger, isAdmin = false }: CertificateViewerProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   const formatDate = (date: Date) => {
@@ -27,6 +28,22 @@ export function CertificateViewer({ certificate, trigger }: CertificateViewerPro
 
   const isExpired = certificate.expiryDate && new Date(certificate.expiryDate) < new Date()
   const skills = certificate.skills || []
+
+  // Generate cache-busting URL for files
+  const getFileUrl = (baseUrl: string) => {
+    const timestamp = certificate.fileUpdatedAt
+      ? new Date(certificate.fileUpdatedAt).getTime()
+      : certificate.updatedAt
+        ? new Date(certificate.updatedAt).getTime()
+        : Date.now()
+    return `${baseUrl}?v=${timestamp}`
+  }
+
+  // Generate URL with admin context
+  const getFullPageUrl = () => {
+    const baseUrl = `/certificate/${certificate._id}`
+    return isAdmin ? `${baseUrl}?from=admin` : baseUrl
+  }
 
   const defaultTrigger = (
     <Button variant="outline" size="sm">
@@ -44,6 +61,11 @@ export function CertificateViewer({ certificate, trigger }: CertificateViewerPro
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Building2 className="w-4 h-4" />
             {certificate.issuer}
+            {isAdmin && (
+              <Badge variant="outline" className="text-xs ml-2">
+                Admin Preview
+              </Badge>
+            )}
           </div>
         </DialogHeader>
 
@@ -53,10 +75,13 @@ export function CertificateViewer({ certificate, trigger }: CertificateViewerPro
             <div className="bg-muted rounded-lg overflow-hidden h-full">
               {certificate.fileType?.includes("pdf") ? (
                 <iframe
-                  src={`/api/certificates/${certificate._id}/file`}
+                  src={getFileUrl(`/api/certificates/${certificate._id}/file`)}
                   className="w-full h-full border-0 rounded"
                   style={{ minHeight: "500px", height: "65vh" }}
                   title={certificate.title}
+                  key={`pdf-${certificate._id}-${certificate.fileUpdatedAt || certificate.updatedAt || Date.now()}`}
+                  onLoad={() => console.log(`📄 PDF loaded for ${certificate.title}`)}
+                  onError={() => console.error(`❌ PDF failed to load for ${certificate.title}`)}
                 />
               ) : (
                 <div
@@ -64,9 +89,19 @@ export function CertificateViewer({ certificate, trigger }: CertificateViewerPro
                   style={{ minHeight: "500px", height: "65vh" }}
                 >
                   <img
-                    src={`/api/certificates/${certificate._id}/file`}
+                    src={getFileUrl(`/api/certificates/${certificate._id || "/placeholder.svg"}/file`)}
                     alt={certificate.title}
                     className="max-w-full max-h-full object-contain rounded"
+                    key={`img-${certificate._id}-${certificate.fileUpdatedAt || certificate.updatedAt || Date.now()}`}
+                    onLoad={() => console.log(`🖼️ Image loaded in viewer for ${certificate.title}`)}
+                    onError={(e) => {
+                      console.error(`❌ Image failed to load in viewer for ${certificate.title}`)
+                      // Fallback to current timestamp
+                      const img = e.target as HTMLImageElement
+                      if (!img.src.includes("&fallback=")) {
+                        img.src = `/api/certificates/${certificate._id}/file?v=${Date.now()}&fallback=true`
+                      }
+                    }}
                   />
                 </div>
               )}
@@ -136,12 +171,26 @@ export function CertificateViewer({ certificate, trigger }: CertificateViewerPro
                 </div>
               </div>
 
+              {/* Views - show for admin */}
+              {isAdmin && certificate.views !== undefined && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Analytics</h4>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p>Views: {certificate.views.toLocaleString()}</p>
+                    {certificate.lastViewed && <p>Last viewed: {formatDate(certificate.lastViewed)}</p>}
+                  </div>
+                </div>
+              )}
+
               {/* Visibility */}
               <div>
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Visibility</h4>
-                <Badge variant={certificate.isPublic ? "default" : "secondary"}>
-                  {certificate.isPublic ? "Public" : "Private"}
-                </Badge>
+                <h4 className="text-sm font-medium text-gray-900 mb-2">Status</h4>
+                <div className="flex gap-2">
+                  <Badge variant={certificate.isPublic ? "default" : "secondary"}>
+                    {certificate.isPublic ? "Public" : "Private"}
+                  </Badge>
+                  {isExpired && <Badge variant="destructive">Expired</Badge>}
+                </div>
               </div>
 
               {/* Metadata */}
@@ -152,6 +201,11 @@ export function CertificateViewer({ certificate, trigger }: CertificateViewerPro
                 {certificate.updatedAt && certificate.updatedAt !== certificate.createdAt && (
                   <p className="text-xs text-muted-foreground">Updated on {formatDate(certificate.updatedAt)}</p>
                 )}
+                {certificate.fileUpdatedAt && certificate.fileUpdatedAt !== certificate.updatedAt && (
+                  <p className="text-xs text-muted-foreground">
+                    File updated on {formatDate(certificate.fileUpdatedAt)}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -160,19 +214,19 @@ export function CertificateViewer({ certificate, trigger }: CertificateViewerPro
         {/* Action Buttons */}
         <div className="flex gap-2 pt-4 border-t">
           <Button asChild className="flex-1">
-            <a href={`/certificate/${certificate._id}`} target="_blank" rel="noopener noreferrer">
+            <a href={getFullPageUrl()} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="w-4 h-4 mr-2" />
               View Full Page
             </a>
           </Button>
           <Button variant="outline" asChild>
-            <a href={`/api/certificates/${certificate._id}/file`} target="_blank" rel="noopener noreferrer">
+            <a href={getFileUrl(`/api/certificates/${certificate._id}/file`)} target="_blank" rel="noopener noreferrer">
               <Eye className="w-4 h-4 mr-2" />
               Open File
             </a>
           </Button>
           <Button variant="outline" asChild>
-            <a href={`/api/certificates/${certificate._id}/file`} download={certificate.fileName}>
+            <a href={getFileUrl(`/api/certificates/${certificate._id}/file`)} download={certificate.fileName}>
               <Download className="w-4 h-4 mr-2" />
               Download
             </a>
