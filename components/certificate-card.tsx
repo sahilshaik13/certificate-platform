@@ -23,8 +23,19 @@ export function CertificateCard({ certificate, showActions = false, onDelete }: 
     })
   }
 
+  const formatViewCount = (count: number | undefined | null): string => {
+    const num = count || 0
+    if (num >= 1000000) {
+      return `${(num / 1000000).toFixed(1)}M`
+    } else if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}K`
+    }
+    return num.toString()
+  }
+
   const isExpired = certificate.expiryDate && new Date(certificate.expiryDate) < new Date()
   const skills = certificate.skills || [] // Ensure skills is always an array
+  const views = certificate.views || 0
 
   return (
     <Card className={`h-full transition-all hover:shadow-lg ${isExpired ? "opacity-75" : ""}`}>
@@ -35,6 +46,11 @@ export function CertificateCard({ certificate, showActions = false, onDelete }: 
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Building2 className="w-4 h-4" />
               {certificate.issuer}
+            </div>
+            {/* View Counter */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Eye className="w-3 h-3" />
+              <span>{formatViewCount(views)} views</span>
             </div>
           </div>
           {certificate.fileType?.includes("image") ? (

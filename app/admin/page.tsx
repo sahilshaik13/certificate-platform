@@ -8,8 +8,10 @@ import { CertificateUploadForm } from "@/components/certificate-upload-form"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Settings, BarChart3 } from "lucide-react"
+import { Plus, Settings, BarChart3, Eye } from "lucide-react"
 import Link from "next/link"
+import { CertificateViewer } from "@/components/certificate-viewer"
+import { AnalyticsDashboard } from "@/components/analytics-dashboard"
 
 interface User {
   _id: string
@@ -112,6 +114,11 @@ export default function AdminPage() {
     public: certificates.filter((cert) => cert.isPublic).length,
     private: certificates.filter((cert) => !cert.isPublic).length,
     expired: certificates.filter((cert) => cert.expiryDate && new Date(cert.expiryDate) < new Date()).length,
+    totalViews: certificates.reduce((sum, cert) => sum + (cert.views || 0), 0),
+    mostViewed: certificates.reduce(
+      (max, cert) => ((cert.views || 0) > (max.views || 0) ? cert : max),
+      certificates[0],
+    ),
   }
 
   return (
@@ -147,6 +154,10 @@ export default function AdminPage() {
               <BarChart3 className="w-4 h-4 mr-2" />
               Overview
             </TabsTrigger>
+            <TabsTrigger value="analytics">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
+            </TabsTrigger>
             <TabsTrigger value="certificates">Certificates</TabsTrigger>
             <TabsTrigger value="settings">
               <Settings className="w-4 h-4 mr-2" />
@@ -156,7 +167,7 @@ export default function AdminPage() {
 
           <TabsContent value="overview" className="space-y-6">
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
               <div className="bg-white rounded-lg p-6 shadow-sm">
                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
                 <p className="text-gray-600">Total Certificates</p>
@@ -173,6 +184,10 @@ export default function AdminPage() {
                 <p className="text-2xl font-bold text-red-600">{stats.expired}</p>
                 <p className="text-gray-600">Expired</p>
               </div>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <p className="text-2xl font-bold text-purple-600">{stats.totalViews.toLocaleString()}</p>
+                <p className="text-gray-600">Total Views</p>
+              </div>
             </div>
 
             {/* Upload Form */}
@@ -183,15 +198,30 @@ export default function AdminPage() {
               <h2 className="text-xl font-semibold mb-4">Recent Certificates</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {certificates.slice(0, 6).map((certificate) => (
-                  <CertificateCard
-                    key={certificate._id}
-                    certificate={certificate}
-                    showActions
-                    onDelete={handleDelete}
-                  />
+                  <div key={certificate._id} className="space-y-2">
+                    <CertificateCard certificate={certificate} showActions={false} onDelete={handleDelete} />
+                    <div className="flex gap-2">
+                      <CertificateViewer
+                        certificate={certificate}
+                        trigger={
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <Eye className="w-4 h-4 mr-2" />
+                            Preview
+                          </Button>
+                        }
+                      />
+                      <Button variant="destructive" size="sm" onClick={() => handleDelete(certificate._id!)}>
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <AnalyticsDashboard />
           </TabsContent>
 
           <TabsContent value="certificates" className="space-y-6">
@@ -206,12 +236,23 @@ export default function AdminPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {certificates.map((certificate) => (
-                  <CertificateCard
-                    key={certificate._id}
-                    certificate={certificate}
-                    showActions
-                    onDelete={handleDelete}
-                  />
+                  <div key={certificate._id} className="space-y-2">
+                    <CertificateCard certificate={certificate} showActions={false} onDelete={handleDelete} />
+                    <div className="flex gap-2">
+                      <CertificateViewer
+                        certificate={certificate}
+                        trigger={
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <Eye className="w-4 h-4 mr-2" />
+                            Preview
+                          </Button>
+                        }
+                      />
+                      <Button variant="destructive" size="sm" onClick={() => handleDelete(certificate._id!)}>
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>

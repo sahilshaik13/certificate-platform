@@ -6,7 +6,7 @@ import type { Certificate } from "@/types/certificate"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Calendar, Building2, ExternalLink, Download, Share2 } from "lucide-react"
+import { ArrowLeft, Calendar, Building2, ExternalLink, Download, Share2, Eye } from 'lucide-react'
 import Link from "next/link"
 
 export default function CertificatePage() {
@@ -14,6 +14,7 @@ export default function CertificatePage() {
   const [certificate, setCertificate] = useState<Certificate | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [viewCount, setViewCount] = useState<number>(0)
 
   useEffect(() => {
     if (params.id) {
@@ -24,11 +25,19 @@ export default function CertificatePage() {
   const fetchCertificate = async (id: string) => {
     try {
       setError(null)
+      console.log("Fetching certificate:", id)
+      
       const response = await fetch(`/api/certificates/${id}`)
+      console.log("Certificate fetch response:", response.status)
 
       if (response.ok) {
         const data = await response.json()
+        console.log("Certificate data:", data)
         setCertificate(data)
+        setViewCount(data.views || 0)
+
+        // Track the view (don't await to avoid blocking UI)
+        trackView(id)
       } else if (response.status === 404) {
         setError("Certificate not found")
       } else {
@@ -42,12 +51,46 @@ export default function CertificatePage() {
     }
   }
 
+  const trackView = async (id: string) => {
+    try {
+      console.log("Tracking view for certificate:", id)
+      
+      const response = await fetch(`/api/certificates/${id}/view`, {
+        method: "POST",
+      })
+
+      console.log("View tracking response:", response.status)
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log("View tracking data:", data)
+        setViewCount(data.views)
+      } else {
+        const errorData = await response.json()
+        console.error("View tracking failed:", errorData)
+      }
+    } catch (error) {
+      console.error("Error tracking view:", error)
+      // Don't show error to user for view tracking failures
+    }
+  }
+
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
     })
+  }
+
+  const formatViewCount = (count: number | undefined | null): string => {
+    const num = count || 0
+    if (num >= 1000000) {
+      return `${(num / 1000000).toFixed(1)}M`
+    } else if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}K`
+    }
+    return num.toString()
   }
 
   const handleShare = async () => {
@@ -170,6 +213,13 @@ export default function CertificatePage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl">{certificate.title}</CardTitle>
+                {/* View Counter */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Eye className="w-4 h-4" />
+                  <span>{formatViewCount(viewCount)} views</span>
+                  {/* Debug info */}
+                  <span className="text-xs opacity-50">({viewCount})</span>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-2 text-sm">
