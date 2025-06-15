@@ -6,7 +6,12 @@ import { CertificateCard } from "@/components/certificate-card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Search, Award, Users, Calendar } from "lucide-react"
+import { Search, Award, Users, Calendar, Eye } from "lucide-react"
+
+interface ViewStats {
+  totalViews: number
+  uniqueViews: number
+}
 
 export default function HomePage() {
   const [certificates, setCertificates] = useState<Certificate[]>([])
@@ -14,11 +19,13 @@ export default function HomePage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [loading, setLoading] = useState(true)
+  const [viewStats, setViewStats] = useState<ViewStats>({ totalViews: 0, uniqueViews: 0 })
 
   const categories = Array.from(new Set(certificates.map((cert) => cert.category).filter(Boolean)))
 
   useEffect(() => {
     fetchCertificates()
+    trackView()
   }, [])
 
   useEffect(() => {
@@ -34,6 +41,41 @@ export default function HomePage() {
       console.error("Error fetching certificates:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const trackView = async () => {
+    try {
+      // Track the view
+      const trackResponse = await fetch("/api/views", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (trackResponse.ok) {
+        const trackData = await trackResponse.json()
+        setViewStats({
+          totalViews: trackData.totalViews,
+          uniqueViews: trackData.uniqueViews,
+        })
+      }
+    } catch (error) {
+      console.error("Error tracking view:", error)
+      // Fallback: fetch current stats without tracking
+      try {
+        const statsResponse = await fetch("/api/views")
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json()
+          setViewStats({
+            totalViews: statsData.totalViews,
+            uniqueViews: statsData.uniqueViews,
+          })
+        }
+      } catch (statsError) {
+        console.error("Error fetching view stats:", statsError)
+      }
     }
   }
 
@@ -92,7 +134,7 @@ export default function HomePage() {
 
       <div className="container mx-auto px-4 py-8">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <Award className="w-8 h-8 text-blue-600" />
@@ -119,6 +161,17 @@ export default function HomePage() {
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.recent}</p>
                 <p className="text-gray-600">Recent (6 months)</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Eye className="w-8 h-8 text-orange-600" />
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{viewStats.totalViews.toLocaleString()}</p>
+                <p className="text-gray-600">Total Views</p>
+                <p className="text-xs text-gray-500">{viewStats.uniqueViews} unique visitors</p>
               </div>
             </div>
           </div>
