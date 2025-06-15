@@ -234,26 +234,12 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {certificates.map((certificate) => (
-                  <div key={certificate._id} className="space-y-2">
-                    <CertificateCard certificate={certificate} showActions={false} onDelete={handleDelete} />
-                    <div className="flex gap-2">
-                      <CertificateViewer
-                        certificate={certificate}
-                        trigger={
-                          <Button variant="outline" size="sm" className="flex-1">
-                            <Eye className="w-4 h-4 mr-2" />
-                            Preview
-                          </Button>
-                        }
-                      />
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(certificate._id!)}>
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {certificates.map((certificate) => (
+                <div key={certificate._id} className="space-y-2">
+                  <CertificateCard certificate={certificate} showActions={false} onDelete={handleDelete} />
+                </div>
+              ))}
               </div>
             </div>
           </TabsContent>
