@@ -22,6 +22,7 @@ const categories = [
   "Design",
   "Marketing",
   "Sports",
+  "Educational",
   "Other",
 ]
 
